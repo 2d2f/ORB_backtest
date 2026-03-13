@@ -1,49 +1,55 @@
-# NQ Opening Range Breakout (ORB) Quantitative Analysis
+# NQ Opening Range Breakout - Quantitative Analysis
 
-This repository contains a professional-grade **Python** backtesting engine designed to analyze and optimize the **Opening Range Breakout (ORB)** strategy on the **Nasdaq-100 (NQ)** index.
+## Overview
 
-The project features a **12-hour momentum filter** and a **Sensitivity Analysis** module to determine the optimal Stop Loss placement relative to market volatility.
+This repository contains a quantitative trading framework designed for the Nasdaq-100 (NQ) index. The project demonstrates the evolution of a trading strategy from a basic price-action model to an optimized, volatility-adjusted system.
 
----
+The strategy focuses on the 15-minute Opening Range (09:30 - 09:45 ET) and uses a combination of directional bias and volatility filters to identify high-probability breakouts.
 
-## Strategy Logic
+## Methodology
 
-The algorithm processes M5 historical data using a multi-step verification process:
+The final model utilizes three distinct layers of filtering to ensure statistical robustness:
 
-### 1. Contextual Trend Filter
-* **Lookback:** 4 to 12 hours (Optimized at **4h** for intraday momentum).
-* **Bias:** The price at 09:30 ET must be outside the structure's midpoint to confirm a `BULL` or `BEAR` bias. Neutral days are discarded to avoid "choppy" price action.
+### 1. Pre-Market Directional Bias
+The strategy analyzes price action during the 60-minute window prior to the New York open (08:30 - 09:30 ET). This specific lookback period was identified through brute-force testing as the most effective for capturing institutional reactions to high-impact economic news releases.
 
-### 2. Execution & Trigger
-* **Opening Range:** 09:30 - 09:45 ET.
-* **Double Confirmation:** Requires two consecutive M5 closes outside the range to filter out liquidity sweeps (fakeouts).
-* **Target:** Fixed Risk/Reward ratio of **1.5**.
+### 2. Volatility Normalization (ATR Filter)
+To adapt to changing market regimes, the Opening Range is compared to the 14-day Average True Range (ATR).
+* Minimum Threshold (0.20): Trades are ignored if the range is too narrow, filtering out low-momentum market noise.
+* Maximum Threshold (0.50): Trades are ignored if the range is too wide, preventing entries into potentially exhausted trends.
 
----
+### 3. Trade Management
+* Entry: Stop order on a 5-minute candle close outside the Opening Range.
+* Stop Loss: Fixed at 100% of the Opening Range to account for Nasdaq volatility.
+* Take Profit: Set at a 1.5 Risk/Reward ratio.
+* Time Exit: Any open positions are liquidated at 16:00 ET (Market Close).
 
-## Parameter Optimization (Sensitivity Analysis)
+## Performance Results
 
-We conducted a comparative study on **Stop Loss (SL) placement** to balance Win Rate and capital protection. The results clearly identify the **100% Range SL** as the most robust configuration.
-
-| SL Percentage | Win Rate | Expectancy (R) | Expectancy (Pts) | Max Drawdown |
-| :--- | :--- | :--- | :--- | :--- |
-| 25% of Range | 41.67% | 0.04 R | 1.98 pts | -13.00 R |
-| 50% of Range | 44.17% | 0.11 R | 5.20 pts | -9.85 R |
-| 75% of Range | 49.17% | 0.17 R | 10.52 pts | -9.29 R |
-| **100% (Optimal)** | **50.00%** | **0.17 R** | **13.98 pts** | **-7.47 R** |
-
-### Key Findings:
-* **Volatility Buffer:** Tightening the SL (25-50%) significantly increases the Max Drawdown due to "market noise" on NQ.
-* **Robustness:** The 100% SL setup offers the lowest Drawdown and the highest expectancy in points, providing a safer cushion against slippage.
-
----
-
-## Final Performance Summary (100% SL Setup)
+The following metrics were achieved over a 12-month backtesting period on 5-minute NQ data.
 
 | Metric | Result |
 | :--- | :--- |
-| **Total Trades** | 120 |
-| **Win Rate** | **50.00%** |
-| **Profit Factor** | **1.44** |
-| **Expectancy** | **+0.17 R / trade** |
-| **Max Drawdown** | **-7.47 R** |
+| Total Trades | 82 |
+| Win Rate | 56.10% |
+| Expectancy | 0.30 R / trade |
+| Total Return | 24.85 R |
+| Risk/Reward Ratio | 1.5 |
+
+These results represent a "Champion" configuration identified through a sensitivity analysis of 300+ parameter combinations.
+
+## Installation and Usage
+
+### Prerequisites
+* Python 3.x
+* Pandas
+* NumPy
+
+### Execution
+1. Clone the repository to your local machine.
+2. Ensure your data file is named NQ_M5_Last_12_Months.csv and placed in the root directory.
+3. Run the analysis script:
+   python3 orb_strategy.py
+
+## Disclaimer
+Trading involves significant risk. This project is for educational and research purposes only. Past performance is not indicative of future results.
