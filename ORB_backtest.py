@@ -4,11 +4,19 @@ import pandas as pd
 # 1. CONFIGURATION
 # ==========================================
 FILE_PATH = 'NQ_M5_Last_12_Months.csv'
-RISK_REWARD = 1.5  # Adjusted to 1.5
-TREND_LOOKBACK_HOURS = 12
+RISK_REWARD = 1.5
+TREND_LOOKBACK_HOURS = 4
+
+# ---> MODIFY THE STOP LOSS VALUE HERE <---
+# Replace the value with the desired percentage of the range:
+# 1.0  = 100% (Classic SL, placed on the opposite side of the range)
+# 0.75 = 75%  (SL is at 3/4 of the range)
+# 0.50 = 50%  (SL is placed exactly in the middle of the range)
+# 0.25 = 25%  (Very tight SL, close to the breakout point)
+SL_RANGE_PERCENT = 0.25
 
 def run_orb_backtest():
-    print(f"Loading data for ORB analysis ({TREND_LOOKBACK_HOURS}h Trend)...")
+    print(f"Loading data for ORB analysis ({TREND_LOOKBACK_HOURS}h Trend, SL at {SL_RANGE_PERCENT*100}% of Range)...")
     df = pd.read_csv(FILE_PATH)
     df['Time'] = pd.to_datetime(df['Time'])
     df.sort_values('Time', inplace=True)
@@ -17,7 +25,7 @@ def run_orb_backtest():
     dates = df['Date'].unique()
     results = []
     
-    print("Analyzing trend and breakouts...\n")
+    print("Analyzing trend, breakouts, and dynamic Stop Loss...\n")
     
     for d in dates:
         # ---------------------------------------------
@@ -59,6 +67,7 @@ def run_orb_backtest():
             
         orb_high = orb_data['High'].max()
         orb_low = orb_data['Low'].min()
+        range_size = orb_high - orb_low # Calculate the total size of the range
         
         # ---------------------------------------------
         # STEP 3: TRIGGER (Breakout between 09:45 and 11:00)
@@ -73,7 +82,6 @@ def run_orb_backtest():
         for _, candle in trigger_window.iterrows():
             if trend == 'BULL' and candle['Close'] > orb_high:
                 trigger = 'LONG'
-                # Entry at the open of the next candle
                 idx = df[df['Time'] == candle['Time']].index[0]
                 if idx + 1 < len(df):
                     entry_price = df.loc[idx + 1, 'Open']
@@ -92,20 +100,20 @@ def run_orb_backtest():
             continue
             
         # ---------------------------------------------
-        # STEP 4: TRADE MANAGEMENT
+        # STEP 4: DYNAMIC TRADE MANAGEMENT
         # ---------------------------------------------
+        # Calculate Stop Loss based on the defined percentage of the range
         if trigger == 'LONG':
-            sl = orb_low
+            sl = orb_high - (range_size * SL_RANGE_PERCENT)
             risk = entry_price - sl
             if risk <= 0: continue
             tp = entry_price + (RISK_REWARD * risk)
         else:
-            sl = orb_high
+            sl = orb_low + (range_size * SL_RANGE_PERCENT)
             risk = sl - entry_price
             if risk <= 0: continue
             tp = entry_price - (RISK_REWARD * risk)
             
-        # Simulate until the end of the US session (16:00 ET)
         t_1600 = pd.to_datetime(f"{d} 16:00:00")
         trade_data = df[(df['Time'] >= entry_time) & (df['Time'] <= t_1600)]
         
@@ -137,7 +145,6 @@ def run_orb_backtest():
                     pnl_pts = RISK_REWARD * risk
                     break
         
-        # Close at market if still open at 16:00
         if outcome == 'TIME' and not trade_data.empty:
             exit_price = trade_data.iloc[-1]['Close']
             if trigger == 'LONG':
@@ -178,7 +185,7 @@ def run_orb_backtest():
     res_df['Drawdown'] = res_df['Cum_R'] - res_df['High_Water_Mark']
     max_dd_r = res_df['Drawdown'].min()
 
-    print("=== ORB PERFORMANCE REPORT (12h Trend) ===")
+    print(f"=== ORB PERFORMANCE REPORT (SL: {SL_RANGE_PERCENT*100}% of Range) ===")
     print(f"Total Trades : {total_trades}")
     print(f"Wins : {wins} | Losses : {losses}")
     print(f"Win Rate : {win_rate:.2f}%")
@@ -186,8 +193,8 @@ def run_orb_backtest():
     print(f"Expectancy (R) : {expectancy_r:.2f} R / Trade")
     print(f"Max Drawdown : {max_dd_r:.2f} R")
     
-    res_df.to_csv('ORB_12h_Strategy_Results.csv', index=False)
-    print("\nAll trades have been saved to 'ORB_12h_Strategy_Results.csv'.")
+    res_df.to_csv('ORB_Dynamic_SL_Results.csv', index=False)
+    print("\nAll trades have been saved to 'ORB_Dynamic_SL_Results.csv'.")
 
 if __name__ == "__main__":
     run_orb_backtest()
