@@ -1,54 +1,49 @@
 # NQ Opening Range Breakout (ORB) Quantitative Analysis
 
-This repository contains a robust **Python** backtesting script designed to analyze the **Opening Range Breakout (ORB)** strategy on the **Nasdaq-100 (NQ)** index. 
+This repository contains a professional-grade **Python** backtesting engine designed to analyze and optimize the **Opening Range Breakout (ORB)** strategy on the **Nasdaq-100 (NQ)** index.
 
-The script implements a specific **Global Trend Filter** and a **Double Candle Confirmation** mechanism to mitigate false signals common during New York market open volatility.
-
----
-
-## 🛠 Strategy Overview
-
-The script automates the analysis of M5 historical data based on the following rules:
-
-### 1. Trend Bias (Contextual Filter)
-* **Lookback:** Analyzes the 12 hours preceding the New York open (09:30 ET).
-* **Logic:** The price at 09:30 must be situated outside the 12-hour structure midpoint (Mid) to validate a `BULL` or `BEAR` bias. If the price remains within the previous range's equilibrium, the day is categorized as `NEUTRAL` and no trades are initiated.
-
-### 2. Opening Range (Trigger)
-* **Reference Window:** 09:30 - 09:45 ET.
-* **Confirmation:** The price must break out of the initial 15-minute range.
-* **Double Close Rule:** To filter out high-volatility wicks and "fakeouts," this setup requires two consecutive M5 candles to close outside the range boundaries.
-
-### 3. Risk Management
-* **Risk/Reward (R:R):** Fixed at **1.5**.
-* **Stop Loss (SL):** Placed at the opposite side of the Opening Range (09:30-09:45).
-* **Time Exit:** A hard exit is enforced at 16:00 ET if neither the target nor the stop loss has been reached.
+The project features a **12-hour momentum filter** and a **Sensitivity Analysis** module to determine the optimal Stop Loss placement relative to market volatility.
 
 ---
 
-## 📈 Performance Metrics (NQ - Last 12 Months)
+## Strategy Logic
 
-Based on historical M5 data, the strategy yields the following performance metrics:
+The algorithm processes M5 historical data using a multi-step verification process:
+
+### 1. Contextual Trend Filter
+* **Lookback:** 4 to 12 hours (Optimized at **4h** for intraday momentum).
+* **Bias:** The price at 09:30 ET must be outside the structure's midpoint to confirm a `BULL` or `BEAR` bias. Neutral days are discarded to avoid "choppy" price action.
+
+### 2. Execution & Trigger
+* **Opening Range:** 09:30 - 09:45 ET.
+* **Double Confirmation:** Requires two consecutive M5 closes outside the range to filter out liquidity sweeps (fakeouts).
+* **Target:** Fixed Risk/Reward ratio of **1.5**.
+
+---
+
+## Parameter Optimization (Sensitivity Analysis)
+
+We conducted a comparative study on **Stop Loss (SL) placement** to balance Win Rate and capital protection. The results clearly identify the **100% Range SL** as the most robust configuration.
+
+| SL Percentage | Win Rate | Expectancy (R) | Expectancy (Pts) | Max Drawdown |
+| :--- | :--- | :--- | :--- | :--- |
+| 25% of Range | 41.67% | 0.04 R | 1.98 pts | -13.00 R |
+| 50% of Range | 44.17% | 0.11 R | 5.20 pts | -9.85 R |
+| 75% of Range | 49.17% | 0.17 R | 10.52 pts | -9.29 R |
+| **100% (Optimal)** | **50.00%** | **0.17 R** | **13.98 pts** | **-7.47 R** |
+
+### Key Findings:
+* **Volatility Buffer:** Tightening the SL (25-50%) significantly increases the Max Drawdown due to "market noise" on NQ.
+* **Robustness:** The 100% SL setup offers the lowest Drawdown and the highest expectancy in points, providing a safer cushion against slippage.
+
+---
+
+## Final Performance Summary (100% SL Setup)
 
 | Metric | Result |
 | :--- | :--- |
-| **Win Rate** | **48.00%** |
-| **Risk/Reward** | **1.5** |
-| **Expectancy** | **+0.20 R / trade** |
-| **Profit Factor** | **1.38** |
-| **Trade Frequency** | ~10 trades / month |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-* Python 3.x
-* Pandas library
-
-### Installation
-1. Clone the repository to your local machine.
-2. Ensure your data file (`NQ_M5_Last_12_Months.csv`) is in the root directory.
-3. Install the required dependencies:
-   ```bash
-   pip install pandas
+| **Total Trades** | 120 |
+| **Win Rate** | **50.00%** |
+| **Profit Factor** | **1.44** |
+| **Expectancy** | **+0.17 R / trade** |
+| **Max Drawdown** | **-7.47 R** |
